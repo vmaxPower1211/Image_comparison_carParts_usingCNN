@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Comparison</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <style>
+        /* General page styles */
+        body {
+            background-color: #f5f6fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin-top: 50px;
+        }
+
+        .img-preview {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-top: 10px;
+        }
+
+        /* Form styling */
+        .form-control {
+            border-radius: 10px;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            padding: 10px 20px;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+
+        .img-preview {
+            max-height: 300px;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 class="text-center mb-5">Compare Two Images</h1>
+
+    <!-- The form that submits the images -->
+    <form id="image-form" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-md-6">
+                <label for="upload_image_1">Upload Image 1</label>
+                <input type="file" class="form-control" name="upload_image_1" id="upload_image_1" required>
+                <div id="img_preview_1"></div> <!-- Display Image 1 preview here -->
+            </div>
+            <div class="col-md-6">
+                <label for="upload_image_2">Upload Image 2</label>
+                <input type="file" class="form-control" name="upload_image_2" id="upload_image_2" required>
+                <div id="img_preview_2"></div> <!-- Display Image 2 preview here -->
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block mt-4">Compare Images</button>
+    </form>
+</div>
+
+<!-- Modal for displaying results -->
+<div class="modal fade" id="resultModal" tabindex="-1" role="dialog" aria-labelledby="resultModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="resultModalLabel">Image Comparison Result</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="resultMessage">
+                <!-- Result message will be inserted here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS and jQuery -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<script>
+    // Function to preview uploaded images
+    function previewImage(input, previewDiv) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = function (e) {
+            const imgElement = document.createElement('img');
+            imgElement.src = e.target.result;
+            imgElement.classList.add('img-fluid', 'img-preview');
+            previewDiv.innerHTML = ''; // Clear previous image if any
+            previewDiv.appendChild(imgElement);
+        };
+        
+        if (file) {
+            reader.readAsDataURL(file);
+        }
+    }
+
+    // Event listeners for file input fields
+    document.getElementById('upload_image_1').addEventListener('change', function () {
+        previewImage(this, document.getElementById('img_preview_1'));
+    });
+
+    document.getElementById('upload_image_2').addEventListener('change', function () {
+        previewImage(this, document.getElementById('img_preview_2'));
+    });
+
+    // Function to show the result in a modal
+    function showModal(result, message) {
+        const resultMessageElement = document.getElementById('resultMessage');
+        if (result === 'identical') {
+            resultMessageElement.innerHTML = `<div class="alert alert-success" role="alert">${message}</div>`;
+        } else if (result === 'different') {
+            resultMessageElement.innerHTML = `<div class="alert alert-danger" role="alert">${message}</div>`;
+        }
+        $('#resultModal').modal('show');
+    }
+
+    // Handle the form submission with AJAX
+    document.getElementById('image-form').addEventListener('submit', function(event) {
+        event.preventDefault();  // Prevent the default form submission
+
+        const formData = new FormData(this);  // Create a FormData object
+
+        // Make AJAX request
+        fetch('{% url "compare_images" %}', {
+            method: 'POST',
+            body: formData,
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Check the result from the backend
+            if (data.result) {
+                showModal(data.result, data.message);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    });
+</script>
+
+</body>
+</html>
